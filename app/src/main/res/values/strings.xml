@@ -3,7 +3,7 @@
     <string name="app_name">Stagehand</string>
 
     <!-- Dashboard Screen -->
-    <string name="dashboard_title">URLs</string>
+    <string name="dashboard_title">Stagehand</string>
     <string name="search_hint">Search URLs…</string>
     <string name="filter_all">All</string>
     <string name="filter_on_show">On Show</string>
