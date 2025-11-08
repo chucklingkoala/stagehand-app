@@ -1,0 +1,67 @@
+# Node/Web related (keep for potential future use)
+node_modules
+dist
+.env
+.env.local
+npm-debug.log
+
+# Android Build files
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+
+# Gradle
+.gradle/
+build/
+*/build/
+app/build/
+app/release/
+app/debug/
+
+# Local configuration
+local.properties
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+*.ipr
+*.iws
+.navigation/
+captures/
+.externalNativeBuild
+.cxx/
+
+# Keystore files (IMPORTANT - never commit these!)
+*.jks
+*.keystore
+keystore.properties
+stagehand-release.keystore
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode
+.claude
+
+# Misc
+*.swp
+*~
+.nfs*
+lint/
+*.hprof
