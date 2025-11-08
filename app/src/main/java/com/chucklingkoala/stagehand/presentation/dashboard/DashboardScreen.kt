@@ -35,6 +35,7 @@ fun DashboardScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
+    var showSearchBar by remember { mutableStateOf(false) }
 
     // Detect when we're near the bottom for infinite scroll
     LaunchedEffect(listState.canScrollForward) {
@@ -53,6 +54,13 @@ fun DashboardScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = { showSearchBar = !showSearchBar }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Toggle Search",
+                            tint = StagehandColors.TextPrimary
+                        )
+                    }
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             Icons.Default.MoreVert,
@@ -86,40 +94,42 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = {
-                    searchText = it
-                    viewModel.onEvent(DashboardEvent.Search(it))
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.search_hint),
-                        color = StagehandColors.TextSecondary
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = StagehandColors.TextSecondary
-                    )
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = StagehandColors.InputBackground,
-                    unfocusedContainerColor = StagehandColors.InputBackground,
-                    focusedTextColor = StagehandColors.TextPrimary,
-                    unfocusedTextColor = StagehandColors.TextPrimary,
-                    focusedBorderColor = StagehandColors.AccentColor,
-                    unfocusedBorderColor = StagehandColors.BorderColor
-                ),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true
-            )
+            // Search Bar (collapsible)
+            if (showSearchBar) {
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                        viewModel.onEvent(DashboardEvent.Search(it))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.search_hint),
+                            color = StagehandColors.TextSecondary
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = StagehandColors.TextSecondary
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = StagehandColors.InputBackground,
+                        unfocusedContainerColor = StagehandColors.InputBackground,
+                        focusedTextColor = StagehandColors.TextPrimary,
+                        unfocusedTextColor = StagehandColors.TextPrimary,
+                        focusedBorderColor = StagehandColors.AccentColor,
+                        unfocusedBorderColor = StagehandColors.BorderColor
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true
+                )
+            }
 
             // Filter Chips
             Row(
