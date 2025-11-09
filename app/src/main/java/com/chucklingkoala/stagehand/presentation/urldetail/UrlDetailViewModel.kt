@@ -129,6 +129,7 @@ class UrlDetailViewModel(
                         it.copy(
                             url = updatedUrl,
                             isSaving = false,
+                            savedSuccessfully = true,
                             error = null
                         )
                     }
@@ -137,6 +138,7 @@ class UrlDetailViewModel(
                     _state.update {
                         it.copy(
                             isSaving = false,
+                            savedSuccessfully = false,
                             error = error.message ?: "Failed to save changes"
                         )
                     }

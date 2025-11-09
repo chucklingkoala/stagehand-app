@@ -25,7 +25,7 @@ import com.chucklingkoala.stagehand.R
 import com.chucklingkoala.stagehand.domain.model.UrlStatus
 import com.chucklingkoala.stagehand.presentation.theme.StagehandColors
 import com.chucklingkoala.stagehand.util.DateFormatter
-import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.compose.get
 import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +33,7 @@ import org.koin.core.parameter.parametersOf
 fun UrlDetailScreen(
     urlId: Int,
     onNavigateBack: () -> Unit,
-    viewModel: UrlDetailViewModel = koinViewModel(parameters = { parametersOf(urlId) })
+    viewModel: UrlDetailViewModel = get(parameters = { parametersOf(urlId) })
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -41,6 +41,13 @@ fun UrlDetailScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showCategoryDropdown by remember { mutableStateOf(false) }
+
+    // Navigate back when save is successful
+    LaunchedEffect(state.savedSuccessfully) {
+        if (state.savedSuccessfully) {
+            onNavigateBack()
+        }
+    }
 
     Scaffold(
         topBar = {

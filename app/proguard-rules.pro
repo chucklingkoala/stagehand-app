@@ -56,3 +56,34 @@
 -keepclassmembers class kotlinx.coroutines.** {
     volatile <fields>;
 }
+
+# Koin
+-keep class org.koin.** { *; }
+-keep class org.koin.core.** { *; }
+-keep class org.koin.androidx.** { *; }
+-dontwarn org.koin.**
+
+# Keep all constructors for dependency injection
+-keepclassmembers class * {
+    public <init>(...);
+}
+
+# Keep ViewModels for Koin injection
+-keep class com.chucklingkoala.stagehand.presentation.** { *; }
+-keep class com.chucklingkoala.stagehand.data.repository.** { *; }
+
+# Keep data classes
+-keep class com.chucklingkoala.stagehand.data.** { *; }
+
+# Reflection
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class kotlin.reflect.** { *; }
+-keep interface kotlin.reflect.** { *; }
+
+# Compose
+-dontwarn androidx.compose.**
+-keep class androidx.compose.** { *; }
+
+# Keep BuildConfig
+-keep class com.chucklingkoala.stagehand.BuildConfig { *; }

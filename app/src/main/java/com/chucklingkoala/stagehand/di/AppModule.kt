@@ -7,18 +7,36 @@ import com.chucklingkoala.stagehand.presentation.categories.CategoriesViewModel
 import com.chucklingkoala.stagehand.presentation.dashboard.DashboardViewModel
 import com.chucklingkoala.stagehand.presentation.urldetail.UrlDetailViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
 val appModule = module {
     // Network
     single { NetworkModule.api }
 
-    // Repositories
-    single { UrlRepository(get()) }
-    single { CategoryRepository(get()) }
+    // Repositories - using factory constructor references
+    factory { UrlRepository(api = get()) }
+    factory { CategoryRepository(api = get()) }
 
-    // ViewModels
-    viewModel { DashboardViewModel(get(), get()) }
-    viewModel { (urlId: Int) -> UrlDetailViewModel(urlId, get(), get()) }
-    viewModel { CategoriesViewModel(get()) }
+    // ViewModels - using explicit factory definitions to avoid ProGuard issues
+    factory {
+        DashboardViewModel(
+            urlRepository = get(),
+            categoryRepository = get()
+        )
+    }
+
+    factory { params ->
+        UrlDetailViewModel(
+            urlId = params.get(),
+            urlRepository = get(),
+            categoryRepository = get()
+        )
+    }
+
+    factory {
+        CategoriesViewModel(
+            categoryRepository = get()
+        )
+    }
 }

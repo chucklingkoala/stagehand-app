@@ -14,6 +14,7 @@ data class UrlDetailState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val isLoadingPreview: Boolean = false,
+    val savedSuccessfully: Boolean = false,
     val error: String? = null
 )
 

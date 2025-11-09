@@ -1,9 +1,20 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
+// Load keystore properties
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
+
     namespace = "com.chucklingkoala.stagehand"
     compileSdk = 34
 
@@ -23,16 +34,36 @@ android {
         buildConfigField("String", "API_BASE_URL", "\"https://stagehand.theprestream.com/api/\"")
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false  // Temporarily disabled to fix Koin reflection issue
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
+                "proguard-koin.pro"
             )
             buildConfigField("String", "API_BASE_URL", "\"https://stagehand.theprestream.com/api/\"")
         }
         debug {
+            // Temporarily enable minification to test ProGuard rules
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                "proguard-koin.pro"
+            )
             buildConfigField("String", "API_BASE_URL", "\"https://stagehand.theprestream.com/api/\"")
         }
     }

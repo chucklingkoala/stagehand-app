@@ -18,12 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.chucklingkoala.stagehand.R
 import com.chucklingkoala.stagehand.presentation.theme.StagehandColors
-import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.compose.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
-    viewModel: CategoriesViewModel = koinViewModel(),
+    viewModel: CategoriesViewModel = get(),
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()

@@ -12,30 +12,48 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.chucklingkoala.stagehand.R
 import com.chucklingkoala.stagehand.domain.model.UrlStatus
 import com.chucklingkoala.stagehand.presentation.components.UrlCard
 import com.chucklingkoala.stagehand.presentation.theme.StagehandColors
-import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.compose.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    viewModel: DashboardViewModel = koinViewModel(),
+    viewModel: DashboardViewModel = get(),
     onNavigateToUrl: (Int) -> Unit,
     onNavigateToCategories: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var showMenu by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
+
+    // Refresh when returning to this screen
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onEvent(DashboardEvent.Refresh)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Detect when we're near the bottom for infinite scroll
     LaunchedEffect(listState.canScrollForward) {
@@ -241,6 +259,39 @@ fun DashboardScreen(
                 ) {
                     CircularProgressIndicator(color = StagehandColors.AccentColor)
                 }
+            } else if (state.error != null && state.urls.isEmpty()) {
+                // Show error message if there's an error and no URLs loaded
+                val errorMessage = state.error
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Error loading URLs",
+                            color = StagehandColors.TextPrimary,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorMessage ?: "Unknown error",
+                            color = StagehandColors.TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.onEvent(DashboardEvent.Refresh) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = StagehandColors.AccentColor
+                            )
+                        ) {
+                            Text("Retry")
+                        }
+                    }
+                }
             } else if (state.urls.isEmpty() && !state.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -261,36 +312,42 @@ fun DashboardScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    state = listState,
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.onEvent(DashboardEvent.Refresh) },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(state.urls, key = { it.id }) { url ->
-                        UrlCard(
-                            url = url,
-                            onCardClick = onNavigateToUrl,
-                            onStatusToggle = { id, status ->
-                                viewModel.onEvent(DashboardEvent.ToggleUrlStatus(id, status))
-                            },
-                            onCategorizeClick = { id ->
-                                // TODO: Show category picker dialog
-                                onNavigateToUrl(id)
-                            }
-                        )
-                    }
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(state.urls, key = { it.id }) { url ->
+                            UrlCard(
+                                url = url,
+                                onCardClick = onNavigateToUrl,
+                                onStatusToggle = { id, status ->
+                                    viewModel.onEvent(DashboardEvent.ToggleUrlStatus(id, status))
+                                },
+                                onCategorizeClick = { id ->
+                                    // TODO: Show category picker dialog
+                                    onNavigateToUrl(id)
+                                }
+                            )
+                        }
 
-                    if (state.isLoadingMore) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp),
-                                    color = StagehandColors.AccentColor
-                                )
+                        if (state.isLoadingMore) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = StagehandColors.AccentColor
+                                    )
+                                }
                             }
                         }
                     }
