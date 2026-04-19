@@ -22,7 +22,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.chucklingkoala.stagehand.R
-import com.chucklingkoala.stagehand.domain.model.UrlStatus
+import com.chucklingkoala.stagehand.presentation.components.CategoryPickerSheet
+import com.chucklingkoala.stagehand.presentation.components.EpisodePickerSheet
+import com.chucklingkoala.stagehand.presentation.components.StatusPills
 import com.chucklingkoala.stagehand.presentation.theme.StagehandColors
 import com.chucklingkoala.stagehand.util.DateFormatter
 import org.koin.androidx.compose.get
@@ -40,13 +42,11 @@ fun UrlDetailScreen(
     val clipboardManager = LocalClipboardManager.current
 
     var showMenu by remember { mutableStateOf(false) }
-    var showCategoryDropdown by remember { mutableStateOf(false) }
+    var showCategorySheet by remember { mutableStateOf(false) }
+    var showEpisodeSheet by remember { mutableStateOf(false) }
 
-    // Navigate back when save is successful
     LaunchedEffect(state.savedSuccessfully) {
-        if (state.savedSuccessfully) {
-            onNavigateBack()
-        }
+        if (state.savedSuccessfully) onNavigateBack()
     }
 
     Scaffold(
@@ -72,7 +72,7 @@ fun UrlDetailScreen(
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             Icons.Default.MoreVert,
-                            contentDescription = "Menu",
+                            contentDescription = stringResource(R.string.menu),
                             tint = StagehandColors.TextPrimary
                         )
                     }
@@ -140,7 +140,6 @@ fun UrlDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Link Preview Card
                 state.linkPreview?.let { preview ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -149,9 +148,7 @@ fun UrlDetailScreen(
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             preview.imageUrl?.let { imageUrl ->
                                 AsyncImage(
                                     model = imageUrl,
@@ -164,7 +161,6 @@ fun UrlDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
-
                             preview.title?.let { title ->
                                 Text(
                                     text = title,
@@ -173,7 +169,6 @@ fun UrlDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
-
                             preview.description?.let { description ->
                                 Text(
                                     text = description,
@@ -186,7 +181,6 @@ fun UrlDetailScreen(
                     }
                 }
 
-                // URL Info Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -240,7 +234,6 @@ fun UrlDetailScreen(
                     }
                 }
 
-                // Edit Section
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -252,120 +245,72 @@ fun UrlDetailScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Category Dropdown
                         Text(
                             text = stringResource(R.string.category_label),
                             style = MaterialTheme.typography.labelMedium,
                             color = StagehandColors.TextSecondary
                         )
-
-                        ExposedDropdownMenuBox(
-                            expanded = showCategoryDropdown,
-                            onExpandedChange = { showCategoryDropdown = it }
+                        OutlinedButton(
+                            onClick = { showCategorySheet = true },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            OutlinedTextField(
-                                value = state.categories.find { it.id == state.selectedCategoryId }?.name
-                                    ?: "Uncategorized",
-                                onValueChange = {},
-                                readOnly = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = StagehandColors.InputBackground,
-                                    unfocusedContainerColor = StagehandColors.InputBackground,
-                                    focusedTextColor = StagehandColors.TextPrimary,
-                                    unfocusedTextColor = StagehandColors.TextPrimary
-                                ),
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown) }
+                            Text(
+                                text = state.categories.firstOrNull { it.id == state.selectedCategoryId }?.name
+                                    ?: stringResource(R.string.uncategorized_label),
+                                color = StagehandColors.TextPrimary
                             )
+                        }
 
-                            ExposedDropdownMenu(
-                                expanded = showCategoryDropdown,
-                                onDismissRequest = { showCategoryDropdown = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Uncategorized") },
-                                    onClick = {
-                                        viewModel.onEvent(UrlDetailEvent.SelectCategory(null))
-                                        showCategoryDropdown = false
-                                    }
-                                )
-                                state.categories.forEach { category ->
-                                    DropdownMenuItem(
-                                        text = { Text(category.name) },
-                                        onClick = {
-                                            viewModel.onEvent(UrlDetailEvent.SelectCategory(category.id))
-                                            showCategoryDropdown = false
-                                        }
-                                    )
-                                }
-                            }
+                        Text(
+                            text = stringResource(R.string.episode_label_detail),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = StagehandColors.TextSecondary
+                        )
+                        OutlinedButton(
+                            onClick = { showEpisodeSheet = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val ep = state.episodes.firstOrNull { it.id == state.selectedEpisodeId }
+                            Text(
+                                text = ep?.let { stringResource(R.string.episode_label, it.episodeNumber) }
+                                    ?: stringResource(R.string.no_episode_label),
+                                color = StagehandColors.TextPrimary
+                            )
                         }
 
                         Divider(color = StagehandColors.BorderColor)
 
-                        // Status Radio Group
                         Text(
                             text = stringResource(R.string.status_label),
                             style = MaterialTheme.typography.labelMedium,
                             color = StagehandColors.TextSecondary
                         )
+                        StatusPills(
+                            current = state.selectedStatus,
+                            onChange = { viewModel.onEvent(UrlDetailEvent.SelectStatus(it)) }
+                        )
 
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = state.selectedStatus == null,
-                                    onClick = { viewModel.onEvent(UrlDetailEvent.SelectStatus(null)) },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = StagehandColors.AccentColor
-                                    )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.covered_label),
+                                color = StagehandColors.TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = state.selectedCovered,
+                                onCheckedChange = {
+                                    viewModel.onEvent(UrlDetailEvent.SetCovered(it))
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = StagehandColors.AccentColor,
+                                    checkedTrackColor = StagehandColors.AccentColor.copy(alpha = 0.5f)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.status_none),
-                                    color = StagehandColors.TextPrimary
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = state.selectedStatus == UrlStatus.ON_SHOW,
-                                    onClick = { viewModel.onEvent(UrlDetailEvent.SelectStatus(UrlStatus.ON_SHOW)) },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = StagehandColors.OnShowGreen
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.on_show),
-                                    color = StagehandColors.TextPrimary
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = state.selectedStatus == UrlStatus.DUMP,
-                                    onClick = { viewModel.onEvent(UrlDetailEvent.SelectStatus(UrlStatus.DUMP)) },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = StagehandColors.DumpRed
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.status_dump),
-                                    color = StagehandColors.TextPrimary
-                                )
-                            }
+                            )
                         }
 
-                        // Save Button
                         Button(
                             onClick = { viewModel.onEvent(UrlDetailEvent.SaveChanges) },
                             modifier = Modifier.fillMaxWidth(),
@@ -391,5 +336,29 @@ fun UrlDetailScreen(
                 }
             }
         }
+    }
+
+    if (showCategorySheet) {
+        CategoryPickerSheet(
+            categories = state.categories,
+            currentCategoryId = state.selectedCategoryId,
+            onPick = { id ->
+                viewModel.onEvent(UrlDetailEvent.SelectCategory(id))
+                showCategorySheet = false
+            },
+            onDismiss = { showCategorySheet = false }
+        )
+    }
+
+    if (showEpisodeSheet) {
+        EpisodePickerSheet(
+            episodes = state.episodes,
+            currentEpisodeId = state.selectedEpisodeId,
+            onPick = { id ->
+                viewModel.onEvent(UrlDetailEvent.SelectEpisode(id))
+                showEpisodeSheet = false
+            },
+            onDismiss = { showEpisodeSheet = false }
+        )
     }
 }

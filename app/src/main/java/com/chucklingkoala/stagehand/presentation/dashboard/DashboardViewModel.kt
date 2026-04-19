@@ -3,7 +3,9 @@ package com.chucklingkoala.stagehand.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chucklingkoala.stagehand.data.repository.CategoryRepository
+import com.chucklingkoala.stagehand.data.repository.EpisodeRepository
 import com.chucklingkoala.stagehand.data.repository.UrlRepository
+import com.chucklingkoala.stagehand.domain.model.Url
 import com.chucklingkoala.stagehand.domain.model.UrlStatus
 import com.chucklingkoala.stagehand.util.Constants
 import kotlinx.coroutines.FlowPreview
@@ -13,7 +15,8 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 class DashboardViewModel(
     private val urlRepository: UrlRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val episodeRepository: EpisodeRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -22,11 +25,10 @@ class DashboardViewModel(
     private val _searchQuery = MutableStateFlow("")
 
     init {
-        // Load initial data
         loadCategories()
+        loadEpisodes()
         loadUrls(refresh = true)
 
-        // Set up search with debounce
         viewModelScope.launch {
             _searchQuery
                 .debounce(Constants.SEARCH_DEBOUNCE_MS)
@@ -46,61 +48,59 @@ class DashboardViewModel(
             is DashboardEvent.Search -> {
                 _searchQuery.value = event.query
             }
-            is DashboardEvent.FilterByCategory -> {
+            is DashboardEvent.SelectFilter -> {
                 _state.update {
                     it.copy(
-                        selectedCategoryId = event.categoryId,
-                        selectedStatus = null,
-                        showUncategorized = false,
-                        currentOffset = 0
+                        selectedFilter = event.filter,
+                        currentOffset = 0,
+                        selectedUrlIds = emptySet()
                     )
                 }
                 loadUrls(refresh = true)
             }
-            is DashboardEvent.FilterByStatus -> {
-                _state.update {
-                    it.copy(
-                        selectedStatus = event.status,
-                        selectedCategoryId = null,
-                        showUncategorized = false,
-                        currentOffset = 0
-                    )
+
+            is DashboardEvent.ChangeStatus ->
+                patchUrl(event.urlId, patch = { it.copy(status = event.status) }) {
+                    urlRepository.updateStatus(event.urlId, event.status?.value)
                 }
-                loadUrls(refresh = true)
-            }
-            is DashboardEvent.FilterUncategorized -> {
-                _state.update {
-                    it.copy(
-                        showUncategorized = !it.showUncategorized,
-                        selectedCategoryId = null,
-                        selectedStatus = null,
-                        currentOffset = 0
-                    )
+            is DashboardEvent.ChangeCategory ->
+                patchUrl(event.urlId, patch = { it.copy(categoryId = event.categoryId) }) {
+                    urlRepository.updateCategory(event.urlId, event.categoryId)
                 }
-                loadUrls(refresh = true)
-            }
-            is DashboardEvent.ClearFilters -> {
-                _state.update {
-                    it.copy(
-                        selectedCategoryId = null,
-                        selectedStatus = null,
-                        showUncategorized = false,
-                        searchQuery = "",
-                        currentOffset = 0
-                    )
+            is DashboardEvent.ChangeEpisode ->
+                patchUrl(event.urlId, patch = { it.copy(episodeId = event.episodeId) }) {
+                    urlRepository.updateEpisode(event.urlId, event.episodeId)
                 }
-                _searchQuery.value = ""
-                loadUrls(refresh = true)
+            is DashboardEvent.ToggleCovered ->
+                patchUrl(event.urlId, patch = { it.copy(covered = event.covered) }) {
+                    urlRepository.updateCovered(event.urlId, event.covered)
+                }
+
+            is DashboardEvent.ToggleSelection -> {
+                _state.update {
+                    val next = it.selectedUrlIds.toMutableSet()
+                    if (!next.add(event.urlId)) next.remove(event.urlId)
+                    it.copy(selectedUrlIds = next)
+                }
             }
-            is DashboardEvent.ToggleUrlStatus -> {
-                toggleUrlStatus(event.urlId, event.currentStatus)
+            is DashboardEvent.ClearSelection -> {
+                _state.update { it.copy(selectedUrlIds = emptySet()) }
             }
-            is DashboardEvent.NavigateToUrl -> {
-                // Navigation handled by UI
+            is DashboardEvent.BulkCategorize -> runBulk {
+                urlRepository.bulkCategorize(it, event.categoryId)
             }
-            is DashboardEvent.NavigateToCategories -> {
-                // Navigation handled by UI
+            is DashboardEvent.BulkAssignEpisode -> runBulk {
+                urlRepository.bulkAssignEpisode(it, event.episodeId)
             }
+            is DashboardEvent.BulkFlag -> runBulk {
+                urlRepository.bulkFlag(it, event.status.value)
+            }
+            is DashboardEvent.BulkMarkCovered -> runBulk {
+                urlRepository.bulkMarkCovered(it, event.covered)
+            }
+            is DashboardEvent.BulkDelete -> runBulk { urlRepository.bulkDelete(it) }
+
+            is DashboardEvent.SubmitUrl -> submitUrl(event.url, event.title)
         }
     }
 
@@ -111,8 +111,19 @@ class DashboardViewModel(
                     _state.update { it.copy(categories = categories) }
                 }
                 .onFailure { error ->
-                    // Silently fail for categories as it's not critical for initial load
                     println("Failed to load categories: ${error.message}")
+                }
+        }
+    }
+
+    private fun loadEpisodes() {
+        viewModelScope.launch {
+            episodeRepository.getEpisodes()
+                .onSuccess { episodes ->
+                    _state.update { it.copy(episodes = episodes) }
+                }
+                .onFailure { error ->
+                    println("Failed to load episodes: ${error.message}")
                 }
         }
     }
@@ -126,21 +137,25 @@ class DashboardViewModel(
             }
 
             val currentState = _state.value
+            val query = currentState.selectedFilter.toQuery()
 
             urlRepository.getUrls(
                 limit = Constants.DEFAULT_PAGE_SIZE,
                 offset = if (refresh) 0 else currentState.currentOffset,
-                categoryId = if (currentState.showUncategorized) 0 else currentState.selectedCategoryId,
-                status = currentState.selectedStatus?.value,
+                categoryId = query.categoryId,
+                episodeId = query.episodeId,
+                status = query.status,
+                covered = query.covered,
                 search = currentState.searchQuery.takeIf { it.isNotBlank() }
             )
                 .onSuccess { (urls, total) ->
                     _state.update {
+                        val offsetAdvance = if (refresh) Constants.DEFAULT_PAGE_SIZE else it.currentOffset + Constants.DEFAULT_PAGE_SIZE
                         it.copy(
                             urls = if (refresh) urls else it.urls + urls,
                             totalCount = total,
-                            currentOffset = if (refresh) Constants.DEFAULT_PAGE_SIZE else it.currentOffset + Constants.DEFAULT_PAGE_SIZE,
-                            hasMore = (if (refresh) Constants.DEFAULT_PAGE_SIZE else it.currentOffset + Constants.DEFAULT_PAGE_SIZE) < total,
+                            currentOffset = offsetAdvance,
+                            hasMore = offsetAdvance < total,
                             isLoading = false,
                             isRefreshing = false,
                             error = null
@@ -166,12 +181,15 @@ class DashboardViewModel(
             _state.update { it.copy(isLoadingMore = true) }
 
             val currentState = _state.value
+            val query = currentState.selectedFilter.toQuery()
 
             urlRepository.getUrls(
                 limit = Constants.DEFAULT_PAGE_SIZE,
                 offset = currentState.currentOffset,
-                categoryId = if (currentState.showUncategorized) 0 else currentState.selectedCategoryId,
-                status = currentState.selectedStatus?.value,
+                categoryId = query.categoryId,
+                episodeId = query.episodeId,
+                status = query.status,
+                covered = query.covered,
                 search = currentState.searchQuery.takeIf { it.isNotBlank() }
             )
                 .onSuccess { (urls, total) ->
@@ -196,30 +214,67 @@ class DashboardViewModel(
         }
     }
 
-    private fun toggleUrlStatus(urlId: Int, currentStatus: UrlStatus?) {
-        viewModelScope.launch {
-            val newStatus = when (currentStatus) {
-                UrlStatus.ON_SHOW -> null // Clear status
-                else -> UrlStatus.ON_SHOW // Set to On Show
-            }
+    // Optimistic: apply `patch` to the local list immediately, fire the API call,
+    // replace with server response on success, revert to prior value on failure.
+    private fun patchUrl(
+        urlId: Int,
+        patch: (Url) -> Url,
+        apiCall: suspend () -> Result<Url>
+    ) {
+        val previous = _state.value.urls.firstOrNull { it.id == urlId } ?: return
 
-            urlRepository.updateUrl(
-                id = urlId,
-                status = newStatus?.value
-            )
-                .onSuccess { updatedUrl ->
-                    // Update the URL in the list
+        _state.update { state ->
+            state.copy(urls = state.urls.map { if (it.id == urlId) patch(it) else it })
+        }
+
+        viewModelScope.launch {
+            apiCall()
+                .onSuccess { updated ->
                     _state.update { state ->
-                        state.copy(
-                            urls = state.urls.map { url ->
-                                if (url.id == urlId) updatedUrl else url
-                            }
-                        )
+                        state.copy(urls = state.urls.map { if (it.id == urlId) updated else it })
                     }
                 }
                 .onFailure { error ->
+                    _state.update { state ->
+                        state.copy(
+                            urls = state.urls.map { if (it.id == urlId) previous else it },
+                            error = "Failed to update: ${error.message}"
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun runBulk(action: suspend (List<Int>) -> Result<Int>) {
+        val ids = _state.value.selectedUrlIds.toList()
+        if (ids.isEmpty()) return
+
+        viewModelScope.launch {
+            action(ids)
+                .onSuccess {
+                    _state.update { it.copy(selectedUrlIds = emptySet()) }
+                    loadUrls(refresh = true)
+                }
+                .onFailure { error ->
+                    _state.update { it.copy(error = "Bulk action failed: ${error.message}") }
+                }
+        }
+    }
+
+    private fun submitUrl(url: String, title: String?) {
+        viewModelScope.launch {
+            _state.update { it.copy(isSubmitting = true) }
+            urlRepository.submitUrl(url, title)
+                .onSuccess {
+                    _state.update { it.copy(isSubmitting = false) }
+                    loadUrls(refresh = true)
+                }
+                .onFailure { error ->
                     _state.update {
-                        it.copy(error = "Failed to update status: ${error.message}")
+                        it.copy(
+                            isSubmitting = false,
+                            error = "Failed to submit URL: ${error.message}"
+                        )
                     }
                 }
         }

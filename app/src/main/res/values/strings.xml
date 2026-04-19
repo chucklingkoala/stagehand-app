@@ -4,23 +4,58 @@
 
     <!-- Dashboard Screen -->
     <string name="dashboard_title">Stagehand</string>
-    <string name="search_hint">Search URLs…</string>
+    <string name="search_hint">Search URLs\u2026</string>
     <string name="filter_all">All</string>
-    <string name="filter_on_show">On Show</string>
-    <string name="filter_dump">Dump</string>
+    <string name="filter_inbox">Inbox (No Episode)</string>
+    <string name="filter_covered">Covered</string>
     <string name="filter_uncategorized">Uncategorized</string>
+    <string name="section_categories">Categories</string>
+    <string name="section_episodes">Episodes</string>
+    <string name="manage_categories">Manage Categories</string>
     <string name="load_more">Load More</string>
     <string name="no_urls_found">No URLs found</string>
     <string name="no_urls_match_filters">No URLs match filters</string>
+    <string name="toggle_search">Toggle search</string>
+    <string name="menu">Menu</string>
+    <string name="open_drawer">Open drawer</string>
+
+    <!-- Status labels (§1) -->
+    <string name="status_no_status">No Status</string>
+    <string name="status_on_show">On Show</string>
+    <string name="status_dumped">Dumped</string>
 
     <!-- URL Card -->
     <string name="posted_by">Posted by: %1$s</string>
     <string name="no_title">No Title</string>
-    <string name="on_show">On Show</string>
-    <string name="on_show_active">On Show ✓</string>
-    <string name="categorize">Categorize</string>
+    <string name="covered_label">Covered</string>
     <string name="duplicate_badge">DUPLICATE</string>
-    <string name="dump_badge">DUMP</string>
+    <string name="uncategorized_label">Uncategorized</string>
+    <string name="no_episode_label">No Episode</string>
+    <string name="episode_label">Ep %1$d</string>
+
+    <!-- Pickers -->
+    <string name="pick_category_title">Assign Category</string>
+    <string name="pick_episode_title">Assign Episode</string>
+    <string name="search_episode_hint">Search by episode number\u2026</string>
+
+    <!-- Quick submit (§6) -->
+    <string name="submit_url_title">Submit URL</string>
+    <string name="url_label">URL</string>
+    <string name="title_optional_label">Title (optional)</string>
+    <string name="submit_action">Submit</string>
+
+    <!-- Bulk bar (§5) -->
+    <string name="selected_count">%1$d selected</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="bulk_assign_category">Assign Category</string>
+    <string name="bulk_assign_episode">Assign Episode</string>
+    <string name="bulk_on_show">On Show</string>
+    <string name="bulk_dumped">Dumped</string>
+    <string name="bulk_mark_covered">Mark Covered</string>
+    <string name="bulk_uncover">Uncover</string>
+    <string name="bulk_delete">Delete</string>
+    <string name="bulk_delete_confirm_title">Delete URLs?</string>
+    <string name="bulk_delete_confirm_message">Permanently delete %1$d URL(s)? This cannot be undone.</string>
 
     <!-- URL Detail Screen -->
     <string name="url_detail_title">URL Details</string>
@@ -30,9 +65,8 @@
     <string name="share_url">Share URL</string>
     <string name="save_changes">Save Changes</string>
     <string name="category_label">Category:</string>
+    <string name="episode_label_detail">Episode:</string>
     <string name="status_label">Status:</string>
-    <string name="status_none">None</string>
-    <string name="status_dump">Dump</string>
 
     <!-- Categories Screen -->
     <string name="categories_title">Categories</string>
@@ -55,7 +89,7 @@
     <string name="delete">Delete</string>
     <string name="close">Close</string>
     <string name="error">Error</string>
-    <string name="loading">Loading…</string>
+    <string name="loading">Loading\u2026</string>
     <string name="retry">Retry</string>
 
     <!-- Error Messages -->

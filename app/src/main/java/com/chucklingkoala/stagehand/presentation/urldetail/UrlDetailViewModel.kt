@@ -3,6 +3,7 @@ package com.chucklingkoala.stagehand.presentation.urldetail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chucklingkoala.stagehand.data.repository.CategoryRepository
+import com.chucklingkoala.stagehand.data.repository.EpisodeRepository
 import com.chucklingkoala.stagehand.data.repository.UrlRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import kotlinx.coroutines.launch
 class UrlDetailViewModel(
     private val urlId: Int,
     private val urlRepository: UrlRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val episodeRepository: EpisodeRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(UrlDetailState())
@@ -22,6 +24,7 @@ class UrlDetailViewModel(
     init {
         loadUrl()
         loadCategories()
+        loadEpisodes()
     }
 
     fun onEvent(event: UrlDetailEvent) {
@@ -31,16 +34,20 @@ class UrlDetailViewModel(
             is UrlDetailEvent.SelectCategory -> {
                 _state.update { it.copy(selectedCategoryId = event.categoryId) }
             }
+            is UrlDetailEvent.SelectEpisode -> {
+                _state.update { it.copy(selectedEpisodeId = event.episodeId) }
+            }
             is UrlDetailEvent.SelectStatus -> {
                 _state.update { it.copy(selectedStatus = event.status) }
+            }
+            is UrlDetailEvent.SetCovered -> {
+                _state.update { it.copy(selectedCovered = event.covered) }
             }
             is UrlDetailEvent.SaveChanges -> saveChanges()
             is UrlDetailEvent.OpenInBrowser,
             is UrlDetailEvent.CopyUrl,
             is UrlDetailEvent.ShareUrl,
-            is UrlDetailEvent.ViewOnDiscord -> {
-                // These are handled by the UI
-            }
+            is UrlDetailEvent.ViewOnDiscord -> Unit
         }
     }
 
@@ -54,12 +61,13 @@ class UrlDetailViewModel(
                         it.copy(
                             url = url,
                             selectedCategoryId = url.categoryId,
+                            selectedEpisodeId = url.episodeId,
                             selectedStatus = url.status,
+                            selectedCovered = url.covered,
                             isLoading = false,
                             error = null
                         )
                     }
-                    // Auto-load link preview
                     loadLinkPreview()
                 }
                 .onFailure { error ->
@@ -80,8 +88,19 @@ class UrlDetailViewModel(
                     _state.update { it.copy(categories = categories) }
                 }
                 .onFailure { error ->
-                    // Silently fail, not critical
                     println("Failed to load categories: ${error.message}")
+                }
+        }
+    }
+
+    private fun loadEpisodes() {
+        viewModelScope.launch {
+            episodeRepository.getEpisodes()
+                .onSuccess { episodes ->
+                    _state.update { it.copy(episodes = episodes) }
+                }
+                .onFailure { error ->
+                    println("Failed to load episodes: ${error.message}")
                 }
         }
     }
@@ -113,36 +132,57 @@ class UrlDetailViewModel(
         }
     }
 
+    // The detail screen aggregates several user choices and commits them all on Save.
+    // We fire the specific per-field repo methods only for fields that actually changed,
+    // so we don't ship a blanket PUT that might clobber server-side state.
     private fun saveChanges() {
         viewModelScope.launch {
+            val initial = _state.value.url ?: return@launch
+            val current = _state.value
             _state.update { it.copy(isSaving = true) }
 
-            val currentState = _state.value
+            var lastError: Throwable? = null
+            var latest = initial
 
-            urlRepository.updateUrl(
-                id = urlId,
-                categoryId = currentState.selectedCategoryId,
-                status = currentState.selectedStatus?.value
-            )
-                .onSuccess { updatedUrl ->
-                    _state.update {
-                        it.copy(
-                            url = updatedUrl,
-                            isSaving = false,
-                            savedSuccessfully = true,
-                            error = null
-                        )
-                    }
+            if (current.selectedCategoryId != initial.categoryId) {
+                urlRepository.updateCategory(urlId, current.selectedCategoryId)
+                    .onSuccess { latest = it }
+                    .onFailure { lastError = it }
+            }
+            if (lastError == null && current.selectedEpisodeId != initial.episodeId) {
+                urlRepository.updateEpisode(urlId, current.selectedEpisodeId)
+                    .onSuccess { latest = it }
+                    .onFailure { lastError = it }
+            }
+            if (lastError == null && current.selectedStatus != initial.status) {
+                urlRepository.updateStatus(urlId, current.selectedStatus?.value)
+                    .onSuccess { latest = it }
+                    .onFailure { lastError = it }
+            }
+            if (lastError == null && current.selectedCovered != initial.covered) {
+                urlRepository.updateCovered(urlId, current.selectedCovered)
+                    .onSuccess { latest = it }
+                    .onFailure { lastError = it }
+            }
+
+            if (lastError == null) {
+                _state.update {
+                    it.copy(
+                        url = latest,
+                        isSaving = false,
+                        savedSuccessfully = true,
+                        error = null
+                    )
                 }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isSaving = false,
-                            savedSuccessfully = false,
-                            error = error.message ?: "Failed to save changes"
-                        )
-                    }
+            } else {
+                _state.update {
+                    it.copy(
+                        isSaving = false,
+                        savedSuccessfully = false,
+                        error = lastError?.message ?: "Failed to save changes"
+                    )
                 }
+            }
         }
     }
 }

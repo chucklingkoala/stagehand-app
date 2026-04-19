@@ -10,6 +10,7 @@ interface StagehandApi {
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0,
         @Query("category_id") categoryId: Int? = null,
+        @Query("episode_id") episodeId: Int? = null,
         @Query("status") status: String? = null,
         @Query("search") search: String? = null,
         @Query("covered") covered: Boolean? = null,
@@ -22,10 +23,18 @@ interface StagehandApi {
         @Path("id") id: Int
     ): UrlDto
 
+    // Body is a map so callers can include only the keys they want to update.
+    // Gson is configured with serializeNulls() so a key mapped to null is sent as JSON null
+    // (required for clearing fields like status).
     @PUT("urls/{id}")
     suspend fun updateUrl(
         @Path("id") id: Int,
-        @Body request: UpdateUrlRequest
+        @Body fields: Map<String, @JvmSuppressWildcards Any?>
+    ): UrlDto
+
+    @POST("urls")
+    suspend fun submitUrl(
+        @Body request: SubmitUrlRequest
     ): UrlDto
 
     @POST("urls/bulk")
@@ -56,6 +65,9 @@ interface StagehandApi {
     suspend fun deleteCategory(
         @Path("id") id: Int
     )
+
+    @GET("episodes")
+    suspend fun getEpisodes(): List<EpisodeDto>
 
     @GET("link-preview")
     suspend fun getLinkPreview(
