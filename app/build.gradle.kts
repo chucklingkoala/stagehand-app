@@ -57,13 +57,7 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://stagehand.theprestream.com/api/\"")
         }
         debug {
-            // Temporarily enable minification to test ProGuard rules
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "proguard-koin.pro"
-            )
+            isMinifyEnabled = false
             buildConfigField("String", "API_BASE_URL", "\"https://stagehand.theprestream.com/api/\"")
         }
     }

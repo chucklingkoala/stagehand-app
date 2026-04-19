@@ -27,6 +27,19 @@
 -if interface * { @retrofit2.http.* <methods>; }
 -keep,allowobfuscation interface <1>
 
+# Keep inherited services.
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface * extends <1>
+
+# Suspend functions are compiled with a Continuation parameter whose type argument
+# carries the real return type via generics; R8 full mode strips these signatures
+# unless explicitly kept.
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
+# Preserve generic signatures for Retrofit suspend-fun return types.
+-if interface * { @retrofit2.http.* public *** *(...); }
+-keep,allowobfuscation,allowshrinking class <3>
+
 # Gson
 -keepattributes Signature
 -keepattributes *Annotation*
