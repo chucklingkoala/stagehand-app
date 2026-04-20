@@ -1,11 +1,12 @@
 package com.chucklingkoala.stagehand.data.remote.dto
 
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 
 data class BulkOperationRequest(
     @SerializedName("url_ids") val urlIds: List<Int>,
-    @SerializedName("operation") val operation: String, // "categorize" or "flag"
-    @SerializedName("value") val value: Any // Int for category_id, String for status
+    @SerializedName("operation") val operation: String,
+    @SerializedName("value") val value: JsonElement
 )
 
 data class BulkOperationResponse(

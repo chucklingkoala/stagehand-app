@@ -77,4 +77,10 @@ interface StagehandApi {
 
     @GET("version")
     suspend fun getVersion(): VersionDto
+
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("auth/refresh")
+    suspend fun refresh(@Body request: RefreshRequest): RefreshResponse
 }

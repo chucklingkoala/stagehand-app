@@ -30,6 +30,10 @@ fun CategoryChip(
         Color.Gray
     }
 
+    // Use white text for dark colors so they remain legible on dark card backgrounds
+    val luminance = 0.299f * categoryColor.red + 0.587f * categoryColor.green + 0.114f * categoryColor.blue
+    val textColor = if (luminance < 0.45f) Color.White else categoryColor
+
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
@@ -47,7 +51,7 @@ fun CategoryChip(
             Text(
                 text = name,
                 style = MaterialTheme.typography.labelSmall,
-                color = categoryColor,
+                color = textColor,
                 fontWeight = FontWeight.Medium
             )
         }

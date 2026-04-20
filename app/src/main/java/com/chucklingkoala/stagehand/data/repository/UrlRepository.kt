@@ -4,6 +4,8 @@ import com.chucklingkoala.stagehand.data.remote.api.StagehandApi
 import com.chucklingkoala.stagehand.data.remote.dto.BulkOperationRequest
 import com.chucklingkoala.stagehand.data.remote.dto.SubmitUrlRequest
 import com.chucklingkoala.stagehand.domain.model.*
+import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
 
 class UrlRepository(private val api: StagehandApi) {
 
@@ -93,8 +95,14 @@ class UrlRepository(private val api: StagehandApi) {
 
     private suspend fun bulk(urlIds: List<Int>, operation: String, value: Any): Result<Int> {
         return try {
+            val jsonValue: JsonElement = when (value) {
+                is Int -> JsonPrimitive(value)
+                is String -> JsonPrimitive(value)
+                is Boolean -> JsonPrimitive(value)
+                else -> JsonPrimitive(value.toString())
+            }
             val response = api.bulkOperation(
-                BulkOperationRequest(urlIds = urlIds, operation = operation, value = value)
+                BulkOperationRequest(urlIds = urlIds, operation = operation, value = jsonValue)
             )
             Result.success(response.affected)
         } catch (e: Exception) {

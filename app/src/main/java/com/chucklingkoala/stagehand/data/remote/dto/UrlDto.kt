@@ -8,7 +8,7 @@ data class UrlDto(
     @SerializedName("posted_by") val postedBy: String,
     @SerializedName("posted_at") val postedAt: String,
     @SerializedName("title") val title: String?,
-    @SerializedName("discord_message_id") val discordMessageId: String,
+    @SerializedName("discord_message_id") val discordMessageId: String?,
     @SerializedName("discord_message_link") val discordMessageLink: String?,
     @SerializedName("discord_user_id") val discordUserId: String?,
     @SerializedName("twitter_username") val twitterUsername: String?,

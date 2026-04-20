@@ -63,14 +63,18 @@ class DashboardViewModel(
                 patchUrl(event.urlId, patch = { it.copy(status = event.status) }) {
                     urlRepository.updateStatus(event.urlId, event.status?.value)
                 }
-            is DashboardEvent.ChangeCategory ->
-                patchUrl(event.urlId, patch = { it.copy(categoryId = event.categoryId) }) {
+            is DashboardEvent.ChangeCategory -> {
+                val categoryName = _state.value.categories.firstOrNull { it.id == event.categoryId }?.name
+                patchUrl(event.urlId, patch = { it.copy(categoryId = event.categoryId, categoryName = categoryName) }) {
                     urlRepository.updateCategory(event.urlId, event.categoryId)
                 }
-            is DashboardEvent.ChangeEpisode ->
-                patchUrl(event.urlId, patch = { it.copy(episodeId = event.episodeId) }) {
+            }
+            is DashboardEvent.ChangeEpisode -> {
+                val episodeNumber = _state.value.episodes.firstOrNull { it.id == event.episodeId }?.episodeNumber
+                patchUrl(event.urlId, patch = { it.copy(episodeId = event.episodeId, episodeNumber = episodeNumber) }) {
                     urlRepository.updateEpisode(event.urlId, event.episodeId)
                 }
+            }
             is DashboardEvent.ToggleCovered ->
                 patchUrl(event.urlId, patch = { it.copy(covered = event.covered) }) {
                     urlRepository.updateCovered(event.urlId, event.covered)
@@ -230,8 +234,14 @@ class DashboardViewModel(
         viewModelScope.launch {
             apiCall()
                 .onSuccess { updated ->
+                    // Server PUT response omits joined fields (category_name, episode_number),
+                    // so resolve them from the locally-loaded lists.
+                    val enriched = updated.copy(
+                        categoryName = _state.value.categories.firstOrNull { it.id == updated.categoryId }?.name,
+                        episodeNumber = _state.value.episodes.firstOrNull { it.id == updated.episodeId }?.episodeNumber
+                    )
                     _state.update { state ->
-                        state.copy(urls = state.urls.map { if (it.id == urlId) updated else it })
+                        state.copy(urls = state.urls.map { if (it.id == urlId) enriched else it })
                     }
                 }
                 .onFailure { error ->

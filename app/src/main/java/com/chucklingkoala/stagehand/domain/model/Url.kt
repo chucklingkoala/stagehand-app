@@ -8,7 +8,7 @@ data class Url(
     val postedBy: String,
     val postedAt: String,
     val title: String?,
-    val discordMessageId: String,
+    val discordMessageId: String?,
     val discordMessageLink: String?,
     val discordUserId: String?,
     val twitterUsername: String?,
